@@ -48,4 +48,6 @@ if __name__ == "__main__":
     cnn.plot_history('accuracy', 'val_accuracy')
     cnn.plot_history('loss', 'val_loss')
 
+    (train_ds, _) = cnn.data_augmentation()
+
     cnn.display_confusion_matrix(train_ds)
