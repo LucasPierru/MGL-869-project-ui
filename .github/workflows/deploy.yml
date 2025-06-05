@@ -20,6 +20,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
 
+      - name: Change directory to frontend
+        run: cd frontend
+
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
 
