@@ -1,0 +1,57 @@
+version: '3'
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./frontend:/app
+
+  API:
+    build: ./API
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - PREDICTION_SERVICE_URL=http://prediction-service:8001
+      - TRAINING_SERVICE_URL=http://training-service:8002
+      - MODEL_STORAGE_URL=http://model-storage:8003
+      - MODEL_PATH=ML/models/cnn.keras
+    depends_on:
+      - mongodb
+
+  ML:
+    build: ./ML
+    ports:
+      - "8001:8001"
+    environment:
+      - MODEL_PATH=ML/models/cnn.keras
+    volumes:
+      - ./models:/models
+
+  training-service:
+    build: ./training_service
+    ports:
+      - "8002:8002"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - MODEL_STORAGE_URL=http://model-storage:8003
+    depends_on:
+      - mongodb
+
+  # model-storage:
+  #   build: ./model_storage
+  #   ports:
+  #     - "8003:8003"
+  #   volumes:
+  #     - ./stored_models:/models
+
+  mongodb:
+    image: mongo:latest
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
