@@ -64,7 +64,7 @@ async def predict(file: UploadFile = File(...)):
         "actual_class": None
     })
 
-    return JSONResponse(result= {"r":"merci"})  # Remplacer par le résultat de la prédiction
+    return JSONResponse(result)  # Remplacer par le résultat de la prédiction
 
 @app.post("/report-error")
 async def report_error(data: PredictionRequest):
@@ -77,10 +77,6 @@ async def report_error(data: PredictionRequest):
 
     # Met à jour la classe réelle
     await db.predictions.update_one({"_id": doc["_id"]}, {"$set": {"actual_class": data.actual_class}})
-
-    # Optionnel : déclencher un retraining
-    async with httpx.AsyncClient() as client:
-        await client.post(f"{settings.TRAINING_SERVICE_URL}/trigger-retrain")
 
     return JSONResponse({"message": "Error reported successfully"})
 

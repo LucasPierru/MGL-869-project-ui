@@ -39,16 +39,6 @@ class KMeansClassifier:
         cluster_ids = self.model.predict(X)
         return np.array([self.cluster_labels[i] for i in cluster_ids])
 
-    def time_single_prediction(self, n_iter=20):
-        # mesure le temps moyen pour classer 1 image
-        start = time.perf_counter()
-        for _ in range(n_iter):
-            _ = self.predict(self.x_test_flat[:1])
-        end = time.perf_counter()
-        avg_ms = (end - start) / n_iter * 1000
-        print(f"Temps moyen pour classer 1 image : {avg_ms:.3f} ms "
-              f"({n_iter} exécutions, total = {(end - start):.3f} s)")
-
     def evaluate(self):
         # obtient y_pred comme indices de cluster → classes
         y_pred = self.predict(self.x_test_flat)
@@ -70,5 +60,4 @@ if __name__ == "__main__":
     clf = KMeansClassifier()
     clf.load_and_preprocess()
     clf.fit()
-    clf.time_single_prediction()
     clf.evaluate()
