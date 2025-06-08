@@ -15,9 +15,9 @@ from PIL import Image
 from . import settings
 
 # --- Charger le modèle au démarrage ---
-# import tensorflow as tf
-MODEL_PATH = settings.MODEL_FILE_PATH  # ex: "./models/kmeans_cifar10.h5" ou un .pt selon ton framework
-# model = tf.keras.models.load_model(MODEL_PATH)
+import tensorflow as tf
+MODEL_PATH = settings.MODEL_FILE_PATH 
+model = tf.keras.models.load_model(MODEL_PATH)
 
 # Initialiser FastAPI et Mongo
 app = FastAPI(title="Prediction API")
