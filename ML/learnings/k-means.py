@@ -1,63 +1,103 @@
-import time
+import cifar10 as Cifar10
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from tensorflow.keras.datasets import cifar10
+import time
 
-class KMeansClassifier:
-    def __init__(self, n_clusters=10, random_state=42, n_init=10):
-        self.n_clusters = n_clusters
-        self.random_state = random_state
-        self.n_init = n_init
-        self.cluster_labels = ["airplane","automobile","bird","cat","deer",
-                               "dog","frog","horse","ship","truck"]
-        self.model = KMeans(n_clusters=self.n_clusters,
-                            random_state=self.random_state,
-                            n_init=self.n_init)
 
-    def load_and_preprocess(self):
-        # Charge et normalise CIFAR-10, aplatis les images
-        (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-        self.y_train = y_train.flatten()
-        self.y_test  = y_test.flatten()
+class KMeans(Cifar10.Cifar10):
 
-        x_train = x_train.astype('float32') / 255.0
-        x_test  = x_test.astype('float32') / 255.0
+    def __init__(self):
+        super().__init__()
+        self.x_train_flat = None
+        self.x_test_flat = None
 
-        n_samples, h, w, c = x_train.shape
-        self.x_train_flat = x_train.reshape(n_samples, h*w*c)
-        self.x_test_flat  = x_test.reshape(x_test.shape[0], h*w*c)
+    def normalize_data(self):
 
-    def fit(self):
-        start = time.time()
+        self.y_train = self.y_train.flatten()
+        self.y_test = self.y_test.flatten()
+
+        self.x_train = self.x_train.astype('float32') / 255.0
+        self.x_test = self.x_test.astype('float32') / 255.0
+
+        # Aplatir chaque image (32×32×3 → 3072)
+        n_samples, h, w, c = self.x_train.shape
+        self.x_train_flat = self.x_train.reshape(n_samples, h * w * c)
+        self.x_test_flat = self.x_test.reshape(self.x_test.shape[0], h * w * c)
+    
+    def train_kmeans(self):
+        self.model = KMeans(n_clusters=10, random_state=42, n_init=10)
+        start_time = time.time()
         self.model.fit(self.x_train_flat)
-        end = time.time()
-        print(f"Training time: {end - start:.2f} seconds")
+        end_time = time.time()
+        print(f"Training time: {end_time - start_time:.2f} seconds")
 
-    def predict(self, X):
-        # renvoie les étiquettes de clusters converties en classes
-        cluster_ids = self.model.predict(X)
-        return np.array([self.cluster_labels[i] for i in cluster_ids])
+    def time_prediction(self):
+        t0 = time.perf_counter()
+        for _ in range(20):
+            cluster_id = self.model.predict(self.x_test_flat)[0]
+            print("")
+            _ = self.class_names[cluster_id]
+        t1 = time.perf_counter()
 
-    def evaluate(self):
-        # obtient y_pred comme indices de cluster → classes
-        y_pred = self.predict(self.x_test_flat)
-        # convertit classes en indices pour metrics
-        y_pred_idx = np.array([self.cluster_labels.index(c) for c in y_pred])
+        avg_time = (t1 - t0) / 20
+        print(f"Temps moyen pour classer 1 image : {avg_time * 1000:.3f} ms "
+            f"({20} exécutions, total = {(t1 - t0):.3f} s)")
         
-        acc  = accuracy_score(self.y_test, y_pred_idx)
-        prec = precision_score(self.y_test, y_pred_idx, average='macro', zero_division=0)
-        rec  = recall_score(self.y_test, y_pred_idx, average='macro', zero_division=0)
-        f1   = f1_score(self.y_test, y_pred_idx, average='macro', zero_division=0)
-        
-        print(f"Accuracy       : {acc * 100:.2f}%")
-        print(f"Precision (M)  : {prec * 100:.2f}%")
-        print(f"Recall    (M)  : {rec * 100:.2f}%")
-        print(f"F1-score  (M)  : {f1 * 100:.2f}%")
+    def compute_purity(self):
+        labels_cluster = self.model.labels_  # vecteur de taille 50000
 
-# Exemple d’utilisation
+        # 3. Calculer la pureté
+        N = len(self.y_train)  # 50000
+
+        purety_sum = 0
+        for cluster_id in range(self.num_classes):
+            # Masque des index appartenant au cluster
+            mask = (labels_cluster == cluster_id)
+            if not np.any(mask):
+                continue
+            # Comptage des vraies classes dans ce cluster
+            true_labels_in_cluster = self.y_train[mask]
+            count_per_class = np.bincount(true_labels_in_cluster, minlength=10)
+            m_j = np.max(count_per_class)
+            purety_sum += m_j
+
+        purity = purety_sum / N
+        print(f"Purity (train) = {purity * 100:.2f}%")
+
+    def compute_performance(self):
+        # Supposons que vous ayez déjà :
+        # y_test : array des labels réels (taille N)
+        # y_pred : array des labels prédits par KMeans (taille N)
+
+        # 1. Accuracy
+        acc = accuracy_score(self.y_test, self.y_pred)
+        print(f"Accuracy : {acc * 100:.2f}%")
+
+        # 2. Précision (average='macro' pour moyenne non pondérée sur les 10 classes)
+        prec = precision_score(self.y_test, self.y_pred, average='macro', zero_division=0)
+        print(f"Precision (macro) : {prec * 100:.2f}%")
+
+        # 3. Rappel (recall)
+        rec = recall_score(self.y_test, self.y_pred, average='macro', zero_division=0)
+        print(f"Recall (macro)    : {rec * 100:.2f}%")
+
+        # 4. F1-score
+        f1 = f1_score(self.y_test, self.y_pred, average='macro', zero_division=0)
+        print(f"F1-score (macro)  : {f1 * 100:.2f}%")
+
 if __name__ == "__main__":
-    clf = KMeansClassifier()
-    clf.load_and_preprocess()
-    clf.fit()
-    clf.evaluate()
+    kmeans = KMeans()
+    kmeans.load_data_set()
+    kmeans.normalize_data()
+    kmeans.train_kmeans()
+    kmeans.time_prediction()
+
+    # Prédiction sur l'ensemble de test
+    kmeans.y_pred = kmeans.model.predict(kmeans.x_test_flat)
+    
+    # Calcul de la pureté
+    kmeans.compute_purity()
+
+    # Calcul des performances
+    kmeans.compute_performance()
