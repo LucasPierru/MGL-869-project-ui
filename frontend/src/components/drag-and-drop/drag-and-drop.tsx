@@ -6,6 +6,7 @@ const categories = ["airplane", "automobile", "bird", "cat", "deer", "dog", "fro
 
 export default function DragAndDrop() {
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [confidence, setConfidence] = useState(0);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
@@ -33,17 +34,13 @@ export default function DragAndDrop() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      // Debug: inspect FormData
-      for (const [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
-
       const res = await axios.post("http://127.0.0.1:8000/predict", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (res.data && categories.includes(res.data.prediction)) {
         setSelectedCategory(res.data.prediction);
+        setConfidence(res.data.confidence);
         const newId = uuidv4();
         setImageId(newId);
         setUploadDate(new Date().toISOString());
@@ -122,6 +119,9 @@ export default function DragAndDrop() {
                 </option>
               ))}
             </select>
+            <span className={`${confidence > 0.5 ? "text-green-500" : "text-red-500"}`}>
+              {(confidence * 100).toFixed(3)}%
+            </span>
           </div>
 
           <div>
