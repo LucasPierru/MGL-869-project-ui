@@ -4,25 +4,37 @@ from datetime import datetime
 from typing import Optional
 
 import uvicorn
-import httpx
 import numpy as np
 import motor.motor_asyncio
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from PIL import Image
 
-from . import settings
+import settings
 
 # --- Charger le modèle au démarrage ---
 import tensorflow as tf
-MODEL_PATH = settings.MODEL_FILE_PATH 
-model = tf.keras.models.load_model(MODEL_PATH)
 
+MODEL_PATH = settings.MODEL_FILE_PATH 
+print(f"Loading model from {MODEL_PATH}")
+
+model = tf.keras.models.load_model(MODEL_PATH, compile=False)
 # Initialiser FastAPI et Mongo
 app = FastAPI(title="Prediction API")
 client = motor.motor_asyncio.AsyncIOMotorClient(settings.MONGODB_URI)
 db = client.prediction_service
+
+# Allow frontend requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 class PredictionRequest(BaseModel):
     prediction: str
@@ -30,12 +42,16 @@ class PredictionRequest(BaseModel):
     actual_class: Optional[str]
 
 async def resize_image(image_data: bytes) -> np.ndarray:
-    """Resize image to 32×32 and retourne un array normalisé."""
+    """Resize image to 224x224 and retourne un array normalisé."""
     image = Image.open(io.BytesIO(image_data)).convert("RGB")
-    image = image.resize((32, 32))
-    arr = np.array(image).astype("float32") / 255.0
-    # (32,32,3) → (1,32,32,3)
+    image = image.resize((224, 224))
+    arr = np.array(image).astype("float32")
+    # (224,224,3) → (1,224,224,3)
     return np.expand_dims(arr, axis=0)
+
+@app.get("/")
+def read_root():
+    return {"message": "Hello from FastAPI!"}
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
@@ -45,6 +61,7 @@ async def predict(file: UploadFile = File(...)):
 
     # 2. Prédiction
     preds = model.predict(img_array)             # shape (1, n_classes)
+    print(f"Prediction shape: {preds.shape}, values: {preds}")
     class_idx = int(np.argmax(preds, axis=1)[0])
     confidence = float(preds[0, class_idx])
 
@@ -55,14 +72,15 @@ async def predict(file: UploadFile = File(...)):
         "prediction": predicted_class,
         "confidence": confidence
     }
+    print(f"Prediction result: {result}")
 
     # 4. Enregistrement dans MongoDB
-    await db.predictions.insert_one({
+    """ await db.predictions.insert_one({
         "prediction": predicted_class,
         "confidence": confidence,
         "timestamp": datetime.utcnow(),
         "actual_class": None
-    })
+    }) """
 
     return JSONResponse(result)  # Remplacer par le résultat de la prédiction
 

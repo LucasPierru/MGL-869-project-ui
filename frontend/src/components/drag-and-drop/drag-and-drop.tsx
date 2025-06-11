@@ -32,9 +32,13 @@ export default function DragAndDrop() {
 
     try {
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("file", file);
+      // Debug: inspect FormData
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
 
-      const res = await axios.post("/api/predict", formData, {
+      const res = await axios.post("http://127.0.0.1:8000/predict", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
