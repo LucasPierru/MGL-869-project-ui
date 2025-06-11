@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from PIL import Image
 
-import settings
+from . import settings
 
 # --- Charger le modèle au démarrage ---
 import tensorflow as tf
