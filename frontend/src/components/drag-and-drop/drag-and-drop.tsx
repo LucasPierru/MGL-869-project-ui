@@ -2,7 +2,18 @@ import { useState, type DragEvent } from "react";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
-const categories = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"];
+const categories = [
+  "airplane",
+  "automobile",
+  "bird",
+  "cat",
+  "deer",
+  "dog",
+  "frog",
+  "horse",
+  "ship",
+  "truck",
+];
 
 export default function DragAndDrop() {
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -15,6 +26,8 @@ export default function DragAndDrop() {
   const [metadata, setMetadata] = useState({ description: "", location: "" });
   const [showForm, setShowForm] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -31,10 +44,12 @@ export default function DragAndDrop() {
     setImageFile(file);
     setIsUploading(true);
 
+    console.log(API_URL);
+
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await axios.post("http://127.0.0.1:8000/predict", formData, {
+      const res = await axios.post(API_URL, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -83,7 +98,8 @@ export default function DragAndDrop() {
       <div
         className="w-full px-16 h-40 border-dashed border-2 rounded flex items-center justify-center text-gray-500 bg-gray-50 hover:bg-gray-100"
         onDrop={handleDrop}
-        onDragOver={handleDragOver}>
+        onDragOver={handleDragOver}
+      >
         {imagePreview ? (
           <img src={imagePreview} alt="Preview" className="max-h-full" />
         ) : (
@@ -107,11 +123,14 @@ export default function DragAndDrop() {
           </div>
 
           <div>
-            <label className="block mb-1 font-medium">Predicted Category:</label>
+            <label className="block mb-1 font-medium">
+              Predicted Category:
+            </label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full border p-2 rounded">
+              className="w-full border p-2 rounded"
+            >
               <option value="">-- Choose one --</option>
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
@@ -119,7 +138,11 @@ export default function DragAndDrop() {
                 </option>
               ))}
             </select>
-            <span className={`${confidence > 0.5 ? "text-green-500" : "text-red-500"}`}>
+            <span
+              className={`${
+                confidence > 0.5 ? "text-green-500" : "text-red-500"
+              }`}
+            >
               {(confidence * 100).toFixed(3)}%
             </span>
           </div>
@@ -129,7 +152,9 @@ export default function DragAndDrop() {
             <input
               type="text"
               value={metadata.description}
-              onChange={(e) => setMetadata({ ...metadata, description: e.target.value })}
+              onChange={(e) =>
+                setMetadata({ ...metadata, description: e.target.value })
+              }
               className="w-full border p-2 rounded"
               placeholder="Enter description"
             />
@@ -140,13 +165,18 @@ export default function DragAndDrop() {
             <input
               type="text"
               value={metadata.location}
-              onChange={(e) => setMetadata({ ...metadata, location: e.target.value })}
+              onChange={(e) =>
+                setMetadata({ ...metadata, location: e.target.value })
+              }
               className="w-full border p-2 rounded"
               placeholder="Enter location"
             />
           </div>
 
-          <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          <button
+            onClick={handleSave}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
             Save to Database
           </button>
         </div>
