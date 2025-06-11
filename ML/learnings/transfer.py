@@ -23,12 +23,12 @@ class TransfertLearning(Cifar10.Cifar10):
         image = preprocess_input(image)
         return image, label
 
-    def resize_data_set(self):
+    def resize_data_set(self, batch_size=IMAGE_GENERATOR_BATCH_SIZE):
         train_ds = tf.data.Dataset.from_tensor_slices((self.x_train, self.y_train))
-        train_ds = train_ds.map(self.preprocess).shuffle(1000).batch(TransfertLearning.IMAGE_GENERATOR_BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+        train_ds = train_ds.map(self.preprocess).shuffle(1000).batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
         val_ds = tf.data.Dataset.from_tensor_slices((self.x_test, self.y_test))
-        val_ds = val_ds.map(self.preprocess).batch(TransfertLearning.IMAGE_GENERATOR_BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+        val_ds = val_ds.map(self.preprocess).batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
         return train_ds, val_ds
 
@@ -48,11 +48,23 @@ class TransfertLearning(Cifar10.Cifar10):
         self.model = tf.keras.Model(inputs, outputs)
 
         self.model.compile(loss="sparse_categorical_crossentropy", optimizer=tf.keras.optimizers.Adam(), metrics=["accuracy"])
+    def lr_scheduler(epoch, lr):
+        if epoch < 10:
+            return lr
+        else:
+            return float(lr * tf.math.exp(-0.1))
+
 
     def train_model(self, epochs=20):
-        (train_ds, val_ds) = self.resize_data_set()
-        self.history = self.model.fit(train_ds,epochs=epochs, validation_data=val_ds, callbacks=[self.early_stopping_callback])
-    
+        learning_rate_scheduler_callback = tf.keras.callbacks.LearningRateScheduler(self.lr_scheduler)
+        batch_sizes = [32, 64, 128]
+        results = {}
+        for batch_size in batch_sizes:
+            (train_ds, val_ds) = self.resize_data_set(batch_size=batch_size)
+            self.history = self.model.fit(train_ds,epochs=epochs, batch_size=batch_size, validation_data=val_ds, callbacks=[self.early_stopping_callback, learning_rate_scheduler_callback])
+            results[batch_size] = self.history.history
+
+        return results
 
 
 if __name__ == "__main__":
