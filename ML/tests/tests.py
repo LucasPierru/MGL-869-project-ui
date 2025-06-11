@@ -205,4 +205,4 @@ if __name__ == "__main__":
   tests.get_robustness_dataset()
   tests.robustness_test_suite()
   tests.measure_inference_time_lite()
-  tests.monitor_batch(val_ds, num_batches=5)
+  tests.monitor_batch(num_batches=5)
