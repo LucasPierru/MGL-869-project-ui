@@ -1,7 +1,9 @@
+from os import getenv
+
 MONGODB_URI = "mongodb://localhost:27017"
 MONGODB_DB_NAME = "toy_classifier_db"
 PREDICTIONS_COLLECTION = "predictions"
-MODEL_FILE_PATH: str = "../ML/models/efficientnet_model.keras"
+MODEL_FILE_PATH: str = getenv("MODEL_FILE_PATH", "/app/ML/models/efficientnet_model.keras")
 CLASS_LABELS: list[str] = ["airplane","automobile","bird","cat","deer",
                             "dog","frog","horse","ship","truck"]
 TRAINING_SERVICE_URL: str = "http://localhost:8001"
